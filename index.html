@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COM SKILL AUCTION — BTC Control</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap');
+
+:root {
+  --bg: #050810;
+  --bg2: #080d1a;
+  --panel: #0d1525;
+  --panel2: #111c30;
+  --border: #1a2a4a;
+  --accent: #00d4ff;
+  --accent2: #ff6b35;
+  --gold: #ffd700;
+  --green: #00ff88;
+  --red: #ff3355;
+  --purple: #b44fff;
+  --text: #c8d8f0;
+  --muted: #4a6080;
+  --t1: #60c0ff;
+  --t2: #ff7744;
+  --t3: #44ffbb;
+  --t4: #ff44aa;
+  --t5: #bbff44;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* GRID BACKGROUND */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* SCANLINES */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 32px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(90deg, var(--bg2), var(--panel));
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent);
+  letter-spacing: 2px;
+}
+.logo span { color: var(--accent2); }
+
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.phase-badge {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  padding: 6px 16px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  letter-spacing: 2px;
+  animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+  0%,100% { border-color: var(--accent); box-shadow: 0 0 10px rgba(0,212,255,0.3); }
+  50% { border-color: var(--accent2); box-shadow: 0 0 20px rgba(255,107,53,0.4); }
+}
+
+/* ── VIEWS ── */
+#view-lobby, #view-btc, #view-hn, #view-display { display: none; }
+#view-lobby.active, #view-btc.active, #view-hn.active, #view-display.active { display: block; }
+
+/* ── LOBBY ── */
+.lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 70px);
+  padding: 40px;
+  text-align: center;
+}
+
+.lobby-title {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 30px rgba(0,212,255,0.5));
+}
+
+.lobby-sub {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin-bottom: 60px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 900px;
+  width: 100%;
+}
+
+.role-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 40px 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(0,212,255,0.05));
+  transition: opacity 0.3s;
+}
+
+.role-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0,212,255,0.15);
+}
+
+.role-icon { font-size: 3rem; margin-bottom: 16px; }
+.role-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.role-desc { font-size: 0.95rem; color: var(--muted); line-height: 1.5; }
+
+/* ── COMMON LAYOUT ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 70px);
+}
+
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.content-area {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* ── TEAMS SIDEBAR ── */
+.sidebar-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.team-card {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-left: 3px solid;
+  padding: 14px;
+  margin-bottom: 12px;
+  transition: all 0.3s;
+}
+
+.team-card.t1 { border-left-color: var(--t1); }
+.team-card.t2 { border-left-color: var(--t2); }
+.team-card.t3 { border-left-color: var(--t3); }
+.team-card.t4 { border-left-color: var(--t4); }
+.team-card.t5 { border-left-color: var(--t5); }
+
+.team-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.team-card.t1 .team-name { color: var(--t1); }
+.team-card.t2 .team-name { color: var(--t2); }
+.team-card.t3 .team-name { color: var(--t3); }
+.team-card.t4 .team-name { color: var(--t4); }
+.team-card.t5 .team-name { color: var(--t5); }
+
+.coin-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.coin-amount {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.coin-bar-wrap { background: rgba(255,255,255,0.06); height: 4px; border-radius: 2px; margin-bottom: 8px; }
+.coin-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease; background: var(--gold); }
+
+.team-skills { display: flex; flex-wrap: wrap; gap: 4px; }
+.skill-chip {
+  font-size: 0.65rem;
+  padding: 2px 8px;
+  background: rgba(0,212,255,0.1);
+  border: 1px solid rgba(0,212,255,0.2);
+  color: var(--accent);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+/* ── SECTION HEADERS ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.section-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ── PACKAGE GRID ── */
+.pkg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.pkg-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.pkg-card.group-1 { --gc: var(--t3); }
+.pkg-card.group-2 { --gc: var(--purple); }
+.pkg-card.group-3 { --gc: var(--t2); }
+.pkg-card.group-4 { --gc: var(--gold); }
+
+.pkg-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--gc);
+  box-shadow: 0 0 10px var(--gc);
+}
+
+.pkg-card.sold {
+  opacity: 0.4;
+  filter: grayscale(0.8);
+}
+
+.pkg-card.active-auction {
+  border-color: var(--accent2);
+  box-shadow: 0 0 30px rgba(255,107,53,0.3);
+  animation: auction-glow 1s infinite alternate;
+}
+
+@keyframes auction-glow {
+  from { box-shadow: 0 0 20px rgba(255,107,53,0.2); }
+  to { box-shadow: 0 0 40px rgba(255,107,53,0.5); border-color: var(--gold); }
+}
+
+.pkg-group-badge {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  color: var(--gc);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  font-family: 'Space Mono', monospace;
+}
+
+.pkg-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.pkg-desc {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.pkg-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pkg-price {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.1rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.pkg-qty {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.pkg-qty.low { color: var(--red); }
+.pkg-qty.unlimited { color: var(--green); }
+
+.pkg-secret {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  color: var(--muted);
+}
+
+.pkg-secret-icon { font-size: 2rem; margin-bottom: 8px; }
+.pkg-secret-text { font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; }
+
+/* BTC CONTROLS */
+.btc-controls {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.btn {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg);
+}
+.btn-primary:hover { background: white; box-shadow: 0 0 20px rgba(0,212,255,0.5); }
+
+.btn-danger {
+  background: var(--red);
+  color: white;
+}
+.btn-danger:hover { background: #ff5577; box-shadow: 0 0 20px rgba(255,51,85,0.5); }
+
+.btn-gold {
+  background: var(--gold);
+  color: var(--bg);
+}
+.btn-gold:hover { box-shadow: 0 0 20px rgba(255,215,0,0.5); }
+
+.btn-purple {
+  background: var(--purple);
+  color: white;
+}
+
+.btn-sm { padding: 6px 14px; font-size: 0.65rem; }
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.control-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+
+/* ACTIVE AUCTION BOX */
+.auction-box {
+  background: linear-gradient(135deg, var(--panel), rgba(255,107,53,0.05));
+  border: 1px solid var(--accent2);
+  padding: 24px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.auction-box::before {
+  content: '⚡ ĐANG ĐẤU GIÁ';
+  position: absolute;
+  top: 12px; right: 16px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.6rem;
+  color: var(--accent2);
+  letter-spacing: 2px;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.auction-pkg-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.auction-price {
+  font-family: 'Space Mono', monospace;
+  font-size: 2rem;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.auction-qty-left {
+  font-size: 0.9rem;
+  color: var(--red);
+  margin-bottom: 20px;
+}
+
+/* HN VIEW — BUY BUTTONS */
+.hn-buy-btn {
+  width: 100%;
+  padding: 20px;
+  font-size: 1.1rem;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, var(--green), #00aa55);
+  color: var(--bg);
+  border: none;
+  cursor: pointer;
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.hn-buy-btn:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 40px rgba(0,255,136,0.8) !important;
+}
+
+.hn-buy-btn:disabled {
+  background: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.hn-buy-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+}
+
+/* DISPLAY / PROJECTOR VIEW */
+.display-view {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.display-header {
+  text-align: center;
+  padding: 32px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.display-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.display-auction-zone {
+  padding: 40px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, var(--bg2), rgba(255,107,53,0.03));
+}
+
+.display-teams-zone {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.display-team-row {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.display-team-row.t1 { border-left-color: var(--t1); }
+.display-team-row.t2 { border-left-color: var(--t2); }
+.display-team-row.t3 { border-left-color: var(--t3); }
+.display-team-row.t4 { border-left-color: var(--t4); }
+.display-team-row.t5 { border-left-color: var(--t5); }
+
+.display-team-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 80px;
+}
+
+.display-coin {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  color: var(--gold);
+  font-weight: 700;
+  min-width: 90px;
+}
+
+.display-bar-wrap { flex: 1; background: rgba(255,255,255,0.06); height: 8px; border-radius: 4px; }
+.display-bar { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.display-bar.t1 { background: var(--t1); }
+.display-bar.t2 { background: var(--t2); }
+.display-bar.t3 { background: var(--t3); }
+.display-bar.t4 { background: var(--t4); }
+.display-bar.t5 { background: var(--t5); }
+
+.display-skills { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.display-skill-tag {
+  font-size: 0.6rem;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 2px;
+}
+
+/* BIG AUCTION DISPLAY */
+.big-pkg-name {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 30px rgba(255,255,255,0.3);
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.big-price {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(2rem, 6vw, 5rem);
+  color: var(--gold);
+  font-weight: 700;
+  text-shadow: 0 0 40px rgba(255,215,0,0.5);
+  margin-bottom: 8px;
+}
+
+.big-qty {
+  font-size: 1.2rem;
+  color: var(--red);
+  margin-bottom: 32px;
+  font-family: 'Space Mono', monospace;
+}
+
+.waiting-msg {
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  color: var(--muted);
+  letter-spacing: 3px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* LOG */
+.log-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 16px;
+  height: 200px;
+  overflow-y: auto;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  color: var(--muted);
+}
+
+.log-entry.success { color: var(--green); }
+.log-entry.warning { color: var(--gold); }
+.log-entry.error { color: var(--red); }
+.log-entry.info { color: var(--accent); }
+
+/* TOAST */
+.toast-container {
+  position: fixed;
+  top: 80px; right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  padding: 14px 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  min-width: 280px;
+  animation: slide-in 0.3s ease;
+  border-left: 3px solid var(--accent);
+}
+
+.toast.success { border-left-color: var(--green); color: var(--green); }
+.toast.error { border-left-color: var(--red); color: var(--red); }
+.toast.warning { border-left-color: var(--gold); color: var(--gold); }
+
+@keyframes slide-in {
+  from { transform: translateX(100px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* WINNER OVERLAY */
+.winner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  animation: fade-in 0.3s ease;
+}
+
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+.winner-box {
+  background: var(--panel);
+  border: 2px solid var(--gold);
+  padding: 60px;
+  text-align: center;
+  max-width: 500px;
+  box-shadow: 0 0 80px rgba(255,215,0,0.3);
+  animation: winner-pop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes winner-pop {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.winner-crown { font-size: 4rem; margin-bottom: 16px; }
+
+.winner-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 3px;
+  margin-bottom: 8px;
+}
+
+.winner-team {
+  font-family: 'Orbitron', monospace;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.winner-pkg {
+  font-size: 1.1rem;
+  color: var(--accent);
+  margin-bottom: 24px;
+}
+
+/* SELECT */
+select {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* CONFIRM MODAL */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9997;
+}
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 32px;
+  min-width: 360px;
+}
+.modal-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  color: var(--accent);
+  margin-bottom: 16px;
+  letter-spacing: 2px;
+}
+.modal-body { font-size: 0.95rem; color: var(--text); margin-bottom: 24px; line-height: 1.6; }
+.modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+/* TIMER */
+.timer {
+  font-family: 'Space Mono', monospace;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--accent2);
+  text-shadow: 0 0 30px rgba(255,107,53,0.6);
+}
+.timer.urgent { color: var(--red); animation: blink 0.5s infinite; }
+
+/* HN STATUS */
+.hn-status {
+  text-align: center;
+  padding: 20px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.hn-status-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.hn-team-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.hn-coins {
+  font-family: 'Space Mono', monospace;
+  font-size: 2rem;
+  color: var(--gold);
+}
+
+input[type=text], input[type=number] {
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 0.95rem;
+  width: 100%;
+}
+input:focus { outline: none; border-color: var(--accent); }
+
+.label { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; letter-spacing: 1px; }
+
+.mb8 { margin-bottom: 8px; }
+.mb16 { margin-bottom: 16px; }
+.mb24 { margin-bottom: 24px; }
+
+/* TAB BAR */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.tab {
+  font-family: 'Orbitron', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  padding: 12px 20px;
+  cursor: pointer;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+<!-- HEADER -->
+<header>
+  <div class="logo">COM<span>SKILLS</span> AUCTION</div>
+  <div class="header-status">
+    <div class="phase-badge" id="phase-badge">LOBBY</div>
+    <div id="header-role" style="font-size:0.8rem;color:var(--muted)"></div>
+  </div>
+</header>
+
+<!-- TOAST -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- LOBBY -->
+<div id="view-lobby" class="active">
+  <div class="lobby">
+    <div class="lobby-title">COM SKILL AUCTION</div>
+    <div class="lobby-sub">Chọn vai trò của bạn để tham gia</div>
+    <div class="role-cards">
+      <div class="role-card" onclick="enterView('btc')">
+        <div class="role-icon">🎮</div>
+        <div class="role-name">BAN TỔ CHỨC</div>
+        <div class="role-desc">Điều phối game, mở gói đấu giá, ghi nhận kết quả</div>
+      </div>
+      <div class="role-card" onclick="enterView('hn')">
+        <div class="role-icon">🖱️</div>
+        <div class="role-name">THÀNH VIÊN HÀ NỘI</div>
+        <div class="role-desc">Giật gói kỹ năng online thay mặt team của bạn</div>
+      </div>
+      <div class="role-card" onclick="enterView('display')">
+        <div class="role-icon">📺</div>
+        <div class="role-name">MÀN HÌNH CHIẾU</div>
+        <div class="role-desc">Hiển thị real-time cho toàn bộ người chơi HCM</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BTC VIEW -->
+<div id="view-btc">
+  <div class="main-grid">
+    <div class="sidebar">
+      <div class="sidebar-title">Bảng Điểm Teams</div>
+      <div id="btc-team-list"></div>
+
+      <div class="sidebar-title" style="margin-top:24px">Activity Log</div>
+      <div class="log-panel" id="btc-log"></div>
+    </div>
+    <div class="content-area">
+      <!-- BTC controls -->
+      <div class="btc-controls mb24">
+        <div class="section-header">
+          <div class="section-title">ĐIỀU KHIỂN BTC</div>
+          <div class="section-line"></div>
+        </div>
+        <div class="control-row">
+          <select id="btc-pkg-select" style="flex:1"></select>
+          <button class="btn btn-primary" onclick="btcOpenAuction()">🚀 MỞ PHIÊN ĐẤU GIÁ</button>
+          <button class="btn btn-danger" onclick="btcCloseAuction()">🛑 ĐÓNG PHIÊN</button>
+        </div>
+        <div class="control-row">
+          <select id="btc-winner-select" style="flex:1"><option value="">-- Chọn Team thắng --</option></select>
+          <button class="btn btn-gold" onclick="btcAwardManual()">🏆 TRAO GÓI THỦ CÔNG</button>
+          <button class="btn btn-purple" onclick="btcRevealSecret()">🎁 REVEAL GÓI BÍ MẬT</button>
+        </div>
+      </div>
+
+      <!-- Current auction -->
+      <div id="btc-auction-box" style="display:none" class="auction-box mb24">
+        <div class="auction-pkg-name" id="btc-auction-name">—</div>
+        <div class="auction-price" id="btc-auction-price">— Coins</div>
+        <div class="auction-qty-left" id="btc-auction-qty">— gói còn lại</div>
+        <div class="control-row">
+          <select id="btc-quick-award" style="flex:1"><option value="">-- Ai vừa giật? --</option></select>
+          <button class="btn btn-gold btn-sm" onclick="btcQuickAward()">✅ XÁC NHẬN GIẬT GÓI</button>
+        </div>
+      </div>
+
+      <!-- Packages -->
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('all')">TẤT CẢ</div>
+        <div class="tab" onclick="switchTab('g1')">NHÓM 1 — THE CORE</div>
+        <div class="tab" onclick="switchTab('g2')">NHÓM 2 — FUTURE PROOF</div>
+        <div class="tab" onclick="switchTab('g3')">NHÓM 3 — MULTI-SKILL</div>
+        <div class="tab" onclick="switchTab('g4')">NHÓM 4 — ĐẶC BIỆT</div>
+      </div>
+      <div id="btc-pkg-grid" class="pkg-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HN VIEW -->
+<div id="view-hn">
+  <div class="main-grid">
+    <div class="sidebar">
+      <div class="sidebar-title">Chọn Team của bạn</div>
+      <div style="margin-bottom:12px">
+        <select id="hn-team-select" style="width:100%" onchange="hnSelectTeam()">
+          <option value="">-- Chọn Team --</option>
+        </select>
+      </div>
+      <div id="hn-status-box" style="display:none">
+        <div class="hn-status">
+          <div class="hn-status-label">Team của bạn</div>
+          <div class="hn-team-name" id="hn-team-name-display"></div>
+          <div class="hn-coins" id="hn-coins-display">1000 🪙</div>
+        </div>
+        <div class="sidebar-title">Kỹ Năng Đã Có</div>
+        <div id="hn-skills-list"></div>
+      </div>
+
+      <div class="sidebar-title" style="margin-top:20px">Tất cả Teams</div>
+      <div id="hn-team-list"></div>
+    </div>
+    <div class="content-area">
+      <!-- Current auction for HN -->
+      <div id="hn-no-auction" style="text-align:center;padding:80px 40px">
+        <div style="font-size:4rem;margin-bottom:16px">⏳</div>
+        <div class="waiting-msg">ĐANG CHỜ BTC MỞ GÓI ĐẤU GIÁ...</div>
+        <div style="font-size:0.85rem;color:var(--muted);margin-top:12px">Khi BTC mở gói, hãy nhấn GIẬT ngay!</div>
+      </div>
+
+      <div id="hn-auction-active" style="display:none">
+        <div class="auction-box mb24">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px">
+            <div>
+              <div class="pkg-group-badge" id="hn-auction-group"></div>
+              <div class="auction-pkg-name" id="hn-auction-name"></div>
+              <div style="font-size:0.9rem;color:var(--muted);margin-bottom:12px" id="hn-auction-desc"></div>
+              <div class="auction-price" id="hn-auction-price"></div>
+              <div class="auction-qty-left" id="hn-auction-qty"></div>
+            </div>
+            <div style="text-align:center">
+              <div class="timer" id="hn-timer">—</div>
+              <div style="font-size:0.7rem;color:var(--muted)">GIÂY CÒN LẠI</div>
+            </div>
+          </div>
+          <button class="hn-buy-btn" id="hn-buy-btn" onclick="hnGrab()" disabled>
+            🚀 GIẬT GÓI NÀY
+          </button>
+          <div style="text-align:center;font-size:0.75rem;color:var(--muted);margin-top:8px" id="hn-buy-msg">Chọn team trước khi giật</div>
+        </div>
+
+        <div class="section-header">
+          <div class="section-title">TẤT CẢ GÓI</div>
+          <div class="section-line"></div>
+        </div>
+        <div id="hn-pkg-grid" class="pkg-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DISPLAY VIEW -->
+<div id="view-display">
+  <div class="display-view">
+    <div class="display-header">
+      <div style="font-family:'Orbitron',monospace;font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px">
+        COM SKILL AUCTION 2025
+      </div>
+      <div style="font-size:0.85rem;color:var(--muted);letter-spacing:3px">CHƯƠNG TRÌNH ĐÀO TẠO HCM × HN</div>
+    </div>
+
+    <div class="display-main">
+      <!-- Left: Auction -->
+      <div class="display-auction-zone">
+        <div id="disp-no-auction">
+          <div style="font-size:5rem;margin-bottom:20px">🎯</div>
+          <div class="waiting-msg" style="font-size:1.2rem">CHUẨN BỊ ĐẤU GIÁ...</div>
+        </div>
+        <div id="disp-auction" style="display:none">
+          <div style="font-size:0.75rem;color:var(--muted);letter-spacing:3px;margin-bottom:8px" id="disp-group"></div>
+          <div class="big-pkg-name" id="disp-pkg-name"></div>
+          <div style="font-size:0.9rem;color:var(--muted);margin-bottom:20px;max-width:400px" id="disp-pkg-desc"></div>
+          <div class="big-price" id="disp-price"></div>
+          <div class="big-qty" id="disp-qty"></div>
+          <div class="timer" id="disp-timer" style="font-size:4rem"></div>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">GIÂY CÒN LẠI</div>
+        </div>
+      </div>
+
+      <!-- Right: Teams -->
+      <div class="display-teams-zone">
+        <div style="font-family:'Orbitron',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:3px;margin-bottom:16px">BẢNG ĐIỂM REAL-TIME</div>
+        <div id="disp-teams"></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- WINNER OVERLAY -->
+<div id="winner-overlay" style="display:none" class="winner-overlay">
+  <div class="winner-box">
+    <div class="winner-crown">🏆</div>
+    <div class="winner-title">GIẬT GÓI THÀNH CÔNG</div>
+    <div class="winner-team" id="winner-team-name"></div>
+    <div class="winner-pkg" id="winner-pkg-name"></div>
+    <div style="font-family:'Space Mono',monospace;font-size:1.5rem;color:var(--gold)" id="winner-cost"></div>
+    <div style="margin-top:24px">
+      <button class="btn btn-primary" onclick="closeWinner()">TIẾP TỤC</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  GAME STATE — single-page, localStorage synced
+// ═══════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'com_auction_state_v3';
+
+const PACKAGES = [
+  // Group 1
+  { id:'g1_1', group:1, groupLabel:'NHÓM 1: THE CORE', name:'COM Config Master', desc:'Thành thạo cấu hình Signal, Message, PDU. Làm cực nhanh nhưng thủ công', price:100, qty:5, unlimited:false },
+  { id:'g1_2', group:1, groupLabel:'NHÓM 1: THE CORE', name:'Legacy Debugger', desc:'Kỹ năng đọc Log và tìm lỗi theo kiểu truyền thống (Manual)', price:150, qty:4, unlimited:false },
+  { id:'g1_3', group:1, groupLabel:'NHÓM 1: THE CORE', name:'Document Hero', desc:'Chuyên gia viết spec và làm report bằng tay trên Word/Excel', price:50, qty:99, unlimited:true },
+  // Group 2
+  { id:'g2_1', group:2, groupLabel:'NHÓM 2: THE FUTURE-PROOF', name:'AI Prompt Engineer', desc:'Biết dùng AI để tự động sinh code, tối ưu hóa cấu hình COM trong vài giây', price:300, qty:2, unlimited:false },
+  { id:'g2_2', group:2, groupLabel:'NHÓM 2: THE FUTURE-PROOF', name:'Automation Architect', desc:'Thành thạo ECU-TEST và Python để build framework test tự động hoàn toàn', price:250, qty:3, unlimited:false },
+  { id:'g2_3', group:2, groupLabel:'NHÓM 2: THE FUTURE-PROOF', name:'Validation Pro (SiL)', desc:'Kỹ năng đưa test lên môi trường mô phỏng (SiL) thay vì phụ thuộc phần cứng', price:200, qty:3, unlimited:false },
+  // Group 3
+  { id:'g3_1', group:3, groupLabel:'NHÓM 3: THE MULTI-SKILL', name:'BSW Explorer', desc:'Hiểu về tầng Autosar BSW để tự xử lý các vấn đề Integration mà không cần đợi team khác', price:250, qty:2, unlimited:false },
+  { id:'g3_2', group:3, groupLabel:'NHÓM 3: THE MULTI-SKILL', name:'Git/DevOps Wizard', desc:'Chuyên gia quản lý source code, CI/CD, giúp team làm việc không bao giờ bị conflict', price:150, qty:3, unlimited:false },
+  { id:'g3_3', group:3, groupLabel:'NHÓM 3: THE MULTI-SKILL', name:'Agile Communicator', desc:'Kỹ năng kết nối HN-HCM, quản lý tiến độ và trình bày giải pháp xuất sắc', price:100, qty:2, unlimited:false },
+  // Group 4
+  { id:'g4_1', group:4, groupLabel:'NHÓM 4: GÓI ĐẶC BIỆT', name:'Chuyển Đổi Số', desc:'Đội sở hữu gói này được quyền đổi 2 kỹ năng ở Nhóm 1 lấy 1 kỹ năng bất kỳ ở Nhóm 2', price:400, qty:1, unlimited:false },
+  { id:'g4_2', group:4, groupLabel:'NHÓM 4: GÓI ĐẶC BIỆT', name:'Outsourcing AI', desc:'AI sẽ làm thay 50% công việc COM, giúp team có thêm thời gian đi học kỹ năng mới', price:500, qty:1, unlimited:false },
+  { id:'g4_3', group:4, groupLabel:'NHÓM 4: GÓI ĐẶC BIỆT', name:'???', desc:'Gói bí mật — sẽ được công bố trong trò chơi', price:0, qty:1, unlimited:false, secret:true },
+];
+
+const TEAM_COLORS = ['t1','t2','t3','t4','t5'];
+const TEAM_COLOR_VARS = ['var(--t1)','var(--t2)','var(--t3)','var(--t4)','var(--t5)'];
+
+function defaultState() {
+  return {
+    teams: [
+      { id:'team1', name:'TEAM ALPHA', coins:1000, skills:[] },
+      { id:'team2', name:'TEAM BRAVO', coins:1000, skills:[] },
+      { id:'team3', name:'TEAM CHARLIE', coins:1000, skills:[] },
+      { id:'team4', name:'TEAM DELTA', coins:1000, skills:[] },
+      { id:'team5', name:'TEAM ECHO', coins:1000, skills:[] },
+    ],
+    packages: PACKAGES.map(p => ({ ...p, soldQty: 0 })),
+    auction: null, // { pkgId, timer }
+    log: [],
+    secretRevealed: false,
+    secretPkg: null,
+  };
+}
+
+let state = loadState();
+let currentView = 'lobby';
+let currentHnTeam = null;
+let timerInterval = null;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      // merge new packages if needed
+      return s;
+    }
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Broadcast to other tabs
+  window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: JSON.stringify(state) }));
+}
+
+// Listen for cross-tab updates
+window.addEventListener('storage', e => {
+  if (e.key === STORAGE_KEY && e.newValue) {
+    try {
+      state = JSON.parse(e.newValue);
+      render();
+    } catch(e) {}
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  VIEWS
+// ═══════════════════════════════════════════════════════
+
+function enterView(view) {
+  currentView = view;
+  document.querySelectorAll('[id^=view-]').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+
+  const labels = { btc: '🎮 BAN TỔ CHỨC', hn: '🖱️ HÀ NỘI', display: '📺 MÀN HÌNH CHIẾU' };
+  document.getElementById('header-role').textContent = labels[view] || '';
+
+  render();
+  if (view !== 'lobby') startAutoRefresh();
+}
+
+let autoRefreshInterval = null;
+function startAutoRefresh() {
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+  autoRefreshInterval = setInterval(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      state = s;
+      render();
+    }
+  }, 800);
+}
+
+function render() {
+  updatePhaseBadge();
+  if (currentView === 'btc') renderBTC();
+  if (currentView === 'hn') renderHN();
+  if (currentView === 'display') renderDisplay();
+}
+
+function updatePhaseBadge() {
+  const badge = document.getElementById('phase-badge');
+  if (state.auction) {
+    badge.textContent = '⚡ ĐANG ĐẤU GIÁ';
+  } else {
+    badge.textContent = '⏸ CHỜ';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  BTC VIEW
+// ═══════════════════════════════════════════════════════
+
+function renderBTC() {
+  renderTeamList('btc-team-list');
+  renderPkgSelect();
+  renderWinnerSelect();
+  renderBTCPkgGrid();
+  renderBTCAuctionBox();
+}
+
+function renderTeamList(containerId) {
+  const c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = state.teams.map((t,i) => `
+    <div class="team-card ${TEAM_COLORS[i]}">
+      <div class="team-name">${t.name}</div>
+      <div class="coin-row">
+        <span class="coin-amount">${t.coins}</span>
+        <span style="font-size:0.85rem;color:var(--gold)">🪙</span>
+      </div>
+      <div class="coin-bar-wrap">
+        <div class="coin-bar" style="width:${t.coins/10}%;background:${TEAM_COLOR_VARS[i]}"></div>
+      </div>
+      <div class="team-skills">
+        ${t.skills.map(s => `<div class="skill-chip">${s}</div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPkgSelect() {
+  const sel = document.getElementById('btc-pkg-select');
+  if (!sel) return;
+  const available = state.packages.filter(p => !p.secret || state.secretRevealed).filter(p => p.unlimited || p.soldQty < p.qty);
+  sel.innerHTML = '<option value="">-- Chọn gói đấu giá --</option>' +
+    available.map(p => `<option value="${p.id}">[G${p.group}] ${p.name} — ${p.price} Coins (còn ${p.unlimited ? '∞' : p.qty - p.soldQty})</option>`).join('');
+}
+
+function renderWinnerSelect() {
+  ['btc-winner-select','btc-quick-award'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Chọn Team --</option>' +
+      state.teams.map(t => `<option value="${t.id}">${t.name} (${t.coins} 🪙)</option>`).join('');
+  });
+}
+
+function renderBTCPkgGrid() {
+  const c = document.getElementById('btc-pkg-grid');
+  if (!c) return;
+  const activeTab = document.querySelector('.tab.active')?.dataset?.tab || 'all';
+  let pkgs = state.packages;
+  if (activeTab !== 'all') {
+    const gMap = { g1:1, g2:2, g3:3, g4:4 };
+    pkgs = pkgs.filter(p => p.group === gMap[activeTab]);
+  }
+  c.innerHTML = pkgs.map(pkg => renderPkgCard(pkg, 'btc')).join('');
+}
+
+function renderPkgCard(pkg, role) {
+  const sold = !pkg.unlimited && pkg.soldQty >= pkg.qty;
+  const isActive = state.auction && state.auction.pkgId === pkg.id;
+  const remaining = pkg.unlimited ? '∞' : pkg.qty - pkg.soldQty;
+
+  if (pkg.secret && !state.secretRevealed) {
+    return `<div class="pkg-card group-4">
+      <div class="pkg-secret">
+        <div class="pkg-secret-icon">🔒</div>
+        <div class="pkg-secret-text">GÓI BÍ MẬT</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:8px">Sẽ được công bố trong trò chơi</div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="pkg-card group-${pkg.group} ${sold?'sold':''} ${isActive?'active-auction':''}">
+    <div class="pkg-group-badge">${pkg.groupLabel}</div>
+    <div class="pkg-name">${pkg.name}</div>
+    <div class="pkg-desc">${pkg.desc}</div>
+    <div class="pkg-meta">
+      <div class="pkg-price">${pkg.price > 0 ? pkg.price + ' 🪙' : '???'}</div>
+      <div class="pkg-qty ${remaining <= 1 && !pkg.unlimited ? 'low' : ''} ${pkg.unlimited ? 'unlimited' : ''}">
+        ${sold ? '❌ HẾT' : `${remaining} gói còn lại`}
+      </div>
+    </div>
+    ${role === 'btc' && !sold && !isActive ? `<button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px" onclick="btcLaunchQuick('${pkg.id}')">⚡ ĐẤU GIÁ NHANH</button>` : ''}
+  </div>`;
+}
+
+function renderBTCAuctionBox() {
+  const box = document.getElementById('btc-auction-box');
+  if (!box) return;
+  if (state.auction) {
+    box.style.display = 'block';
+    const pkg = state.packages.find(p => p.id === state.auction.pkgId);
+    if (pkg) {
+      document.getElementById('btc-auction-name').textContent = pkg.name;
+      document.getElementById('btc-auction-price').textContent = pkg.price + ' Coins';
+      document.getElementById('btc-auction-qty').textContent = `${pkg.unlimited ? '∞' : pkg.qty - pkg.soldQty} gói còn lại`;
+    }
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+let currentTab = 'all';
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  event.target.dataset.tab = tab;
+  renderBTCPkgGrid();
+}
+
+function btcLaunchQuick(pkgId) {
+  document.getElementById('btc-pkg-select').value = pkgId;
+  btcOpenAuction();
+}
+
+function btcOpenAuction() {
+  const pkgId = document.getElementById('btc-pkg-select').value;
+  if (!pkgId) return toast('Chọn gói trước!', 'error');
+  const pkg = state.packages.find(p => p.id === pkgId);
+  if (!pkg) return;
+  if (!pkg.unlimited && pkg.soldQty >= pkg.qty) return toast('Gói này đã hết!', 'error');
+
+  state.auction = { pkgId, startedAt: Date.now() };
+  addLog(`BTC mở đấu giá: ${pkg.name} — ${pkg.price} Coins`, 'info');
+  saveState();
+  render();
+  startTimer();
+  toast(`Đã mở: ${pkg.name}`, 'success');
+}
+
+function btcCloseAuction() {
+  if (!state.auction) return toast('Không có phiên nào đang mở', 'error');
+  state.auction = null;
+  stopTimer();
+  saveState();
+  render();
+  toast('Đã đóng phiên đấu giá', 'warning');
+}
+
+function btcQuickAward() {
+  const teamId = document.getElementById('btc-quick-award').value;
+  if (!teamId) return toast('Chọn team thắng!', 'error');
+  if (!state.auction) return toast('Không có phiên nào đang mở', 'error');
+  awardPkg(teamId, state.auction.pkgId);
+}
+
+function btcAwardManual() {
+  const teamId = document.getElementById('btc-winner-select').value;
+  const pkgSel = document.getElementById('btc-pkg-select').value;
+  if (!teamId) return toast('Chọn team thắng!', 'error');
+  if (!pkgSel) return toast('Chọn gói!', 'error');
+  awardPkg(teamId, pkgSel);
+}
+
+function awardPkg(teamId, pkgId) {
+  const team = state.teams.find(t => t.id === teamId);
+  const pkg = state.packages.find(p => p.id === pkgId);
+  if (!team || !pkg) return;
+  if (team.coins < pkg.price) return toast(`${team.name} không đủ coins!`, 'error');
+
+  team.coins -= pkg.price;
+  team.skills.push(pkg.name);
+  if (!pkg.unlimited) pkg.soldQty++;
+  state.auction = null;
+  stopTimer();
+
+  addLog(`🏆 ${team.name} giật được [${pkg.name}] — trừ ${pkg.price} coins, còn ${team.coins}`, 'success');
+  saveState();
+  render();
+  showWinner(team.name, pkg.name, pkg.price);
+}
+
+function btcRevealSecret() {
+  if (state.secretRevealed) return toast('Gói bí mật đã được reveal!', 'warning');
+  // reveal with a special package
+  const secretPkg = state.packages.find(p => p.secret);
+  if (secretPkg) {
+    secretPkg.secret = false;
+    secretPkg.name = 'TIME MACHINE 🕐';
+    secretPkg.desc = 'Đội này được phép "quay ngược thời gian" — hoàn lại 1 quyết định mua gói đã trả và lấy lại coins!';
+    secretPkg.price = 350;
+    state.secretRevealed = true;
+    addLog('🎁 BTC REVEAL GÓI BÍ MẬT: TIME MACHINE!', 'warning');
+    saveState();
+    render();
+    toast('🎁 Gói bí mật đã được công bố!', 'success');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  HN VIEW
+// ═══════════════════════════════════════════════════════
+
+function renderHN() {
+  // Team select
+  const sel = document.getElementById('hn-team-select');
+  if (sel && sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">-- Chọn Team của bạn --</option>' +
+      state.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+    if (currentHnTeam) sel.value = currentHnTeam;
+  }
+
+  renderTeamList('hn-team-list');
+  renderHNAuction();
+}
+
+function hnSelectTeam() {
+  currentHnTeam = document.getElementById('hn-team-select').value;
+  const box = document.getElementById('hn-status-box');
+  if (currentHnTeam) {
+    box.style.display = 'block';
+    updateHNStatus();
+    updateHNBuyBtn();
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function updateHNStatus() {
+  if (!currentHnTeam) return;
+  const team = state.teams.find(t => t.id === currentHnTeam);
+  if (!team) return;
+  document.getElementById('hn-team-name-display').textContent = team.name;
+  document.getElementById('hn-coins-display').textContent = `${team.coins} 🪙`;
+  document.getElementById('hn-skills-list').innerHTML =
+    team.skills.length ? team.skills.map(s => `<div class="skill-chip" style="display:block;margin-bottom:6px;font-size:0.8rem">${s}</div>`).join('') :
+    '<div style="font-size:0.8rem;color:var(--muted)">Chưa có kỹ năng nào</div>';
+}
+
+function renderHNAuction() {
+  const noAuction = document.getElementById('hn-no-auction');
+  const auctionActive = document.getElementById('hn-auction-active');
+
+  if (!noAuction || !auctionActive) return;
+
+  if (state.auction) {
+    noAuction.style.display = 'none';
+    auctionActive.style.display = 'block';
+    const pkg = state.packages.find(p => p.id === state.auction.pkgId);
+    if (pkg) {
+      document.getElementById('hn-auction-group').textContent = pkg.groupLabel;
+      document.getElementById('hn-auction-name').textContent = pkg.name;
+      document.getElementById('hn-auction-desc').textContent = pkg.desc;
+      document.getElementById('hn-auction-price').textContent = pkg.price + ' 🪙';
+      document.getElementById('hn-auction-qty').textContent = `${pkg.unlimited ? 'Không giới hạn' : pkg.qty - pkg.soldQty + ' gói còn lại'}`;
+    }
+    updateHNBuyBtn();
+    updateHNStatus();
+  } else {
+    noAuction.style.display = 'block';
+    auctionActive.style.display = 'none';
+  }
+
+  // Package grid for context
+  const grid = document.getElementById('hn-pkg-grid');
+  if (grid) {
+    grid.innerHTML = state.packages.map(pkg => renderPkgCard(pkg, 'hn')).join('');
+  }
+}
+
+function updateHNBuyBtn() {
+  const btn = document.getElementById('hn-buy-btn');
+  const msg = document.getElementById('hn-buy-msg');
+  if (!btn || !msg) return;
+
+  if (!currentHnTeam) {
+    btn.disabled = true;
+    msg.textContent = 'Chọn team của bạn trước';
+    return;
+  }
+  if (!state.auction) {
+    btn.disabled = true;
+    msg.textContent = 'Chưa có gói nào đang đấu giá';
+    return;
+  }
+  const team = state.teams.find(t => t.id === currentHnTeam);
+  const pkg = state.packages.find(p => p.id === state.auction.pkgId);
+  if (!team || !pkg) return;
+  if (team.coins < pkg.price) {
+    btn.disabled = true;
+    msg.textContent = `Không đủ coins! Cần ${pkg.price}, có ${team.coins}`;
+    return;
+  }
+  btn.disabled = false;
+  msg.textContent = `Nhấn nhanh để giật! Team ${team.name} sẽ trả ${pkg.price} 🪙`;
+}
+
+function hnGrab() {
+  if (!currentHnTeam || !state.auction) return;
+  const team = state.teams.find(t => t.id === currentHnTeam);
+  const pkg = state.packages.find(p => p.id === state.auction.pkgId);
+  if (!team || !pkg) return;
+  if (team.coins < pkg.price) return toast('Không đủ coins!', 'error');
+
+  // Disable immediately to prevent double-grab
+  const btn = document.getElementById('hn-buy-btn');
+  if (btn) btn.disabled = true;
+
+  team.coins -= pkg.price;
+  team.skills.push(pkg.name);
+  if (!pkg.unlimited) pkg.soldQty++;
+  state.auction = null;
+  stopTimer();
+
+  addLog(`🏆 ${team.name} [HN] giật được [${pkg.name}] — trừ ${pkg.price} coins`, 'success');
+  saveState();
+  render();
+  showWinner(team.name, pkg.name, pkg.price);
+}
+
+// ═══════════════════════════════════════════════════════
+//  DISPLAY VIEW
+// ═══════════════════════════════════════════════════════
+
+function renderDisplay() {
+  // Teams
+  const c = document.getElementById('disp-teams');
+  if (c) {
+    c.innerHTML = state.teams.map((t,i) => `
+      <div class="display-team-row ${TEAM_COLORS[i]}">
+        <div class="display-team-name ${TEAM_COLORS[i]}" style="color:${TEAM_COLOR_VARS[i]}">${t.name}</div>
+        <div class="display-coin">${t.coins} 🪙</div>
+        <div class="display-bar-wrap">
+          <div class="display-bar ${TEAM_COLORS[i]}" style="width:${t.coins/10}%"></div>
+        </div>
+        <div class="display-skills">
+          ${t.skills.slice(-3).map(s => `<div class="display-skill-tag">${s}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // Auction
+  const noA = document.getElementById('disp-no-auction');
+  const auc = document.getElementById('disp-auction');
+  if (!noA || !auc) return;
+
+  if (state.auction) {
+    noA.style.display = 'none';
+    auc.style.display = 'block';
+    const pkg = state.packages.find(p => p.id === state.auction.pkgId);
+    if (pkg) {
+      document.getElementById('disp-group').textContent = pkg.groupLabel;
+      document.getElementById('disp-pkg-name').textContent = pkg.name;
+      document.getElementById('disp-pkg-desc').textContent = pkg.desc;
+      document.getElementById('disp-price').textContent = pkg.price + ' 🪙';
+      document.getElementById('disp-qty').textContent = `${pkg.unlimited ? 'Không giới hạn' : pkg.qty - pkg.soldQty + ' gói còn lại'}`;
+    }
+  } else {
+    noA.style.display = 'block';
+    auc.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════
+
+function startTimer() {
+  stopTimer();
+  let sec = 30;
+  updateTimerDisplay(sec);
+  timerInterval = setInterval(() => {
+    sec--;
+    updateTimerDisplay(sec);
+    if (sec <= 0) stopTimer();
+  }, 1000);
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  updateTimerDisplay(null);
+}
+
+function updateTimerDisplay(sec) {
+  ['hn-timer','disp-timer'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (sec === null) { el.textContent = '—'; el.classList.remove('urgent'); return; }
+    el.textContent = sec;
+    if (sec <= 5) el.classList.add('urgent');
+    else el.classList.remove('urgent');
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════
+
+function showWinner(teamName, pkgName, cost) {
+  document.getElementById('winner-team-name').textContent = teamName;
+  document.getElementById('winner-pkg-name').textContent = pkgName;
+  document.getElementById('winner-cost').textContent = `-${cost} 🪙`;
+  document.getElementById('winner-overlay').style.display = 'flex';
+}
+
+function closeWinner() {
+  document.getElementById('winner-overlay').style.display = 'none';
+}
+
+function addLog(msg, type = 'info') {
+  const time = new Date().toLocaleTimeString('vi-VN');
+  state.log.unshift({ msg, type, time });
+  if (state.log.length > 50) state.log.pop();
+
+  const log = document.getElementById('btc-log');
+  if (log) {
+    log.innerHTML = state.log.map(l => `<div class="log-entry ${l.type}">[${l.time}] ${l.msg}</div>`).join('');
+  }
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// Reset button in header
+document.querySelector('.logo').addEventListener('dblclick', () => {
+  if (confirm('Reset toàn bộ game về trạng thái ban đầu?')) {
+    state = defaultState();
+    saveState();
+    render();
+    toast('Game đã được reset!', 'warning');
+  }
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>
